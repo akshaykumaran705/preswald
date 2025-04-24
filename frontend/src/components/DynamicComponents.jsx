@@ -263,17 +263,45 @@ const MemoizedComponent = memo(
             className={component.className}
           />
         );
-
+      
       case 'plot':
         return (
-          <DataVisualizationWidget
-            key={componentKey}
-            {...props}
-            data={component.data || {}}
-            layout={component.layout || {}}
-            config={component.config || {}}
-          />
+          <div key={componentKey} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <DataVisualizationWidget
+              {...props}
+              data={component.data || {}}
+              layout={component.layout || {}}
+              config={component.config || {}}
+            />
+            <button
+              onClick={() => {
+                if (window.Plotly && document.querySelector('.js-plotly-plot')) {
+                  window.Plotly.downloadImage(document.querySelector('.js-plotly-plot'), {
+                    format: 'png',
+                    filename: 'preswald-graph',
+                    width: 1000,
+                    height: 600,
+                  });
+                } else {
+                  console.warn('Plotly chart not found or Plotly not loaded');
+                }
+              }}
+              style={{
+                alignSelf: 'flex-start',
+                padding: '8px 16px',
+                backgroundColor: '#111827',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '500',
+                cursor: 'pointer',
+              }}
+            >
+              Download Graph 📥
+            </button>
+          </div>
         );
+
 
       case 'dag':
         return <DAGVisualizationWidget key={componentKey} {...props} data={component.data || {}} />;
