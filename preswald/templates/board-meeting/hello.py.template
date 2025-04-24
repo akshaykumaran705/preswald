@@ -1,13 +1,155 @@
-from preswald import text, plotly, connect, get_df, table
 import pandas as pd
 import plotly.express as px
+from preswald import (
+    Workflow,
+    get_df,
+    text,
+    selectbox,
+    table,
+    progress,
+    plotly,
+    separator,
+    checkbox,
+    alert,
+)
 
-text("# Board Meeting Deck")
-text("Present quarterly financials, strategic goals, key initiatives, and hiring plans to your board.")
+workflow = Workflow()
 
-# Load the CSV
-connect()
-df = get_df('sample_csv')
+# 1. Load and normalize data
+@workflow.atom()
+def load_data():
+    df = get_df("sample_csv")
 
-# Show the data
-table(df)
+    # Normalize column names: snake_case, stripped
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+        .str.replace("%", "", regex=False)
+    )
+
+    # Parse progress column if it exists
+    if "strategic_goals_progress" in df.columns:
+        try:
+            df["strategic_goals_progress"] = (
+                df["strategic_goals_progress"]
+                .astype(str)
+                .str.replace('%', '', regex=False)
+                .str.strip()
+                .astype(float)
+            )
+        except Exception as e:
+            alert(f"⚠️ Failed to parse strategic progress: {e}", level="error")
+
+    return df
+
+# 2. Quarter selector
+@workflow.atom(dependencies=["load_data"])
+def quarter_selector(load_data):
+    if "quarter" not in load_data.columns:
+        alert("❌ Missing 'quarter' column.", level="error")
+        return None
+
+    quarters = sorted(load_data["quarter"].dropna().unique())
+    return selectbox("📅 Select a Quarter", options=quarters, default=quarters[-1])
+
+# 3. Filtered snapshot
+@workflow.atom(dependencies=["load_data", "quarter_selector"])
+def filtered_snapshot(load_data, quarter_selector):
+    if quarter_selector is None:
+        return pd.DataFrame()
+
+    df_q = load_data[load_data["quarter"] == quarter_selector]
+    if df_q.empty:
+        alert(f"No data found for quarter: {quarter_selector}", level="warning")
+    return df_q
+
+# 4. Executive summary
+@workflow.atom(dependencies=["filtered_snapshot"])
+def executive_summary(filtered_snapshot):
+    if filtered_snapshot.empty:
+        return
+
+    qtr = filtered_snapshot["quarter"].iloc[0]
+    avg_rev = filtered_snapshot["revenue"].mean()
+    avg_profit = filtered_snapshot["profit"].mean()
+
+    text(f"# 📊 Executive Summary — {qtr}")
+    text(f"**Average Revenue:** ${avg_rev:,.0f} &nbsp;&nbsp;&nbsp; **Average Profit:** ${avg_profit:,.0f}")
+    separator()
+
+# 5. Financial bar chart
+@workflow.atom(dependencies=["filtered_snapshot"])
+def financial_chart(filtered_snapshot):
+    if filtered_snapshot.empty:
+        return
+
+    text("## 💰 Financial Performance")
+    fig = px.bar(
+        filtered_snapshot,
+        x="quarter",
+        y=["revenue", "profit"],
+        barmode="group",
+        title="Revenue & Profit",
+        labels={"value": "USD", "variable": "Metric"},
+    )
+    plotly(fig)
+    separator()
+
+# 6. Strategic goals progress
+@workflow.atom(dependencies=["filtered_snapshot"])
+def strategy_progress(filtered_snapshot):
+    if "strategic_goals_progress" not in filtered_snapshot.columns:
+        alert("Missing 'strategic_goals_progress' column.", level="info")
+        return
+
+    text("## 🎯 Strategic Goals Progress")
+    for _, row in filtered_snapshot.iterrows():
+        progress(label=f"{row['quarter']}", value=row["strategic_goals_progress"])
+    separator()
+
+# 7. Key initiatives & risks
+@workflow.atom(dependencies=["filtered_snapshot"])
+def initiatives_summary(filtered_snapshot):
+    text("## 📌 Key Initiatives and Risk Factors")
+    expected_cols = ["quarter", "key_initiatives_status", "risk_factors"]
+    for col in expected_cols:
+        if col not in filtered_snapshot.columns:
+            alert(f"Column '{col}' is missing from the data.", level="warning")
+            return
+
+    table(filtered_snapshot[expected_cols])
+    separator()
+
+# 8. Talent & hiring overview
+@workflow.atom(dependencies=["filtered_snapshot"])
+def hiring_summary(filtered_snapshot):
+    text("## 🧑‍💼 Talent & Hiring Overview")
+
+    if "open_positions" in filtered_snapshot.columns:
+        avg_open = filtered_snapshot["open_positions"].mean()
+        text(f"**Avg. Open Positions:** {avg_open:.1f}")
+
+        if "hiring_plan_status" in filtered_snapshot.columns:
+            fig = px.bar(
+                filtered_snapshot,
+                x="quarter",
+                y="open_positions",
+                color="hiring_plan_status",
+                title="Hiring Plan Status by Quarter"
+            )
+            plotly(fig)
+    else:
+        alert("Missing 'open_positions' column.", level="warning")
+
+    separator()
+
+# 9. Optional raw table view
+@workflow.atom(dependencies=["filtered_snapshot"])
+def optional_table(filtered_snapshot):
+    if checkbox("🔍 Show raw data for selected quarter"):
+        table(filtered_snapshot, title="Raw Data Snapshot")
+
+# Run it!
+workflow.execute()

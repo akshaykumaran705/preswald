@@ -289,15 +289,6 @@
         "type": "Preswald"
       },
       {
-        "id": "bacteria-evolution",
-        "title": "Bacteria Evolution Simulation",
-        "author": "Structured Labs",
-        "description": "Visualize bacterial growth and evolution patterns with interactive simulations.",
-        "preview": "bacteria-evolution",
-        "tags": ["Research", "Science", "Visualization"],
-        "type": "Preswald"
-      },
-      {
         "id": "real-estate-search",
         "title": "Real Estate Search Dashboard",
         "author": "Structured Labs",
@@ -592,15 +583,6 @@
         "description": "Track feature adoption, user behavior, and engagement patterns across your product.",
         "preview": "product-usage",
         "tags": ["Product", "Analytics", "User"],
-        "type": "Preswald"
-      },
-      {
-        "id": "api-docs",
-        "title": "API Documentation Generator",
-        "author": "Structured Labs",
-        "description": "Create interactive API documentation with code samples and testing tools.",
-        "preview": "api-docs",
-        "tags": ["Engineering", "Documentation", "API"],
         "type": "Preswald"
       },
       {
