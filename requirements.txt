@@ -27,3 +27,4 @@ pytz==2024.1
 
 # Optional: used by the branding/image manager
 Pillow==10.3.0
+matplotlib
