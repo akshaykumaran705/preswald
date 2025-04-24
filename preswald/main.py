@@ -229,3 +229,8 @@ def _handle_favicon_request(service: PreswaldService) -> HTMLResponse:
     except Exception as e:
         logger.error(f"Error serving index: {e}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
+app = create_app()
+
+# Optional: still allow CLI startup for flexibility
+if __name__ == "__main__":
+    start_server()
